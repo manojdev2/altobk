@@ -3,7 +3,7 @@ const defaultOrigins = [
   "http://localhost:3001",
   "http://localhost:3002",
   "http://localhost:5173",
-  "https://alto-ev-admin-web.vercel.app"
+  "https://alto-ev-admin-web.vercel.app",
   "https://uv-charging-admin.vercel.app",
   "https://uv-charging-admin.onrender.com",
   "https://admin.evcharging.naas-emart.com",
