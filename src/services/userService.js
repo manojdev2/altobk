@@ -15,8 +15,10 @@ import PaymentCardModel from "../models/PaymentCardModel.js";
 import ChargingSessionModel from "../models/ChargingSessionModel.js";
 import { recordEmissionsForSession } from "./carbonService.js";
 import AppSettingsModel from "../models/AppSettingsModel.js";
-import { EmailSend } from "../utils/emailHalper.js";
-import { isEmailConfigured, DEV_EXPOSE_OTP } from "../config/config.js";
+// Email/OTP verification disabled — see RegisterService, VerifyOTPService,
+// ResendOTPService, ForgotPasswordService, VerifyForgotOTPService below.
+// import { EmailSend } from "../utils/emailHalper.js";
+// import { isEmailConfigured, DEV_EXPOSE_OTP } from "../config/config.js";
 import { EncodeToken } from "../utils/tokenHelper.js";
 import { askGemini } from "../utils/geminiHelper.js";
 import { rankStationsByScore } from "../utils/stationScore.js";
@@ -124,11 +126,12 @@ const getGoogleDistance = async (originLat, originLng, destLat, destLng) => {
 };
 
 // ─── Helper: Generate 6-digit OTP & expiry (90 seconds) ───
-const generateOTP = () => {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiry = new Date(Date.now() + 90 * 1000); // 90 seconds
-  return { code, expiry };
-};
+// Disabled along with the rest of the OTP flow — see functions below.
+// const generateOTP = () => {
+//   const code = Math.floor(100000 + Math.random() * 900000).toString();
+//   const expiry = new Date(Date.now() + 90 * 1000); // 90 seconds
+//   return { code, expiry };
+// };
 
 // ─── Helper: Hash password (simple crypto, no bcrypt needed) ───
 const hashPassword = (password) =>
@@ -143,36 +146,36 @@ const hashPassword = (password) =>
 //
 // The flag is deliberately only consulted when email is unconfigured, so
 // setting SMTP restores normal behaviour even if the flag is left switched on.
-const deliverOTP = async (email, code, emailSubject, emailText) => {
-  if (isEmailConfigured()) {
-    await EmailSend(email, emailText, emailSubject);
-    return { delivered: true };
-  }
-
-  if (DEV_EXPOSE_OTP) {
-    console.warn(
-      `[DEV_EXPOSE_OTP] No mail provider configured — OTP for ${email} is ${code} (expires in 90s)`
-    );
-    return { delivered: false, devOtp: code };
-  }
-
-  throw new Error(
-    "Email delivery is not configured on this server, so the verification " +
-      "code cannot be sent. Set SMTP_HOST, SMTP_USER, SMTP_PASS and " +
-      "EMAIL_FROM, or set DEV_EXPOSE_OTP=true to return the code in the " +
-      "response instead."
-  );
-};
+// const deliverOTP = async (email, code, emailSubject, emailText) => {
+//   if (isEmailConfigured()) {
+//     await EmailSend(email, emailText, emailSubject);
+//     return { delivered: true };
+//   }
+//
+//   if (DEV_EXPOSE_OTP) {
+//     console.warn(
+//       `[DEV_EXPOSE_OTP] No mail provider configured — OTP for ${email} is ${code} (expires in 90s)`
+//     );
+//     return { delivered: false, devOtp: code };
+//   }
+//
+//   throw new Error(
+//     "Email delivery is not configured on this server, so the verification " +
+//       "code cannot be sent. Set SMTP_HOST, SMTP_USER, SMTP_PASS and " +
+//       "EMAIL_FROM, or set DEV_EXPOSE_OTP=true to return the code in the " +
+//       "response instead."
+//   );
+// };
 
 // Keeps the `devOtp` field out of the payload entirely when email worked, so
 // nothing leaks the moment SMTP is configured.
-const otpResponse = (delivery, sentMessage) => ({
-  status: "Success",
-  message: delivery.delivered
-    ? sentMessage
-    : "Email is not configured on this server — use the code in `devOtp`.",
-  ...(delivery.delivered ? {} : { devOtp: delivery.devOtp }),
-});
+// const otpResponse = (delivery, sentMessage) => ({
+//   status: "Success",
+//   message: delivery.delivered
+//     ? sentMessage
+//     : "Email is not configured on this server — use the code in `devOtp`.",
+//   ...(delivery.delivered ? {} : { devOtp: delivery.devOtp }),
+// });
 
 // ════════════════════════════════════════════════════════════
 // 1. REGISTER  –  POST /api/v1/Register
@@ -191,12 +194,12 @@ export const RegisterService = async (req) => {
       return { status: "fail", message: "Email already registered. Please login." };
     }
 
-    const { code, expiry } = generateOTP();
+    // OTP verification disabled — const { code, expiry } = generateOTP();
 
     // Send OTP email
-    const emailText = `Your OTP verification code is: ${code}. It expires in 90 seconds.`;
-    const emailSubject = "UV Charging – Email Verification";
-    const delivery = await deliverOTP(email, code, emailSubject, emailText);
+    // const emailText = `Your OTP verification code is: ${code}. It expires in 90 seconds.`;
+    // const emailSubject = "UV Charging – Email Verification";
+    // const delivery = await deliverOTP(email, code, emailSubject, emailText);
 
     // Upsert user (handles re-registration of unverified users)
     await UserModel.updateOne(
@@ -206,16 +209,17 @@ export const RegisterService = async (req) => {
           fullName,
           phone,
           password: hashPassword(password),
-          otp: code,
-          otpExpires: expiry,
-          isVerified: false,
+          // otp: code,
+          // otpExpires: expiry,
+          isVerified: true,
           authProvider: "email",
         },
       },
       { upsert: true }
     );
 
-    return otpResponse(delivery, "OTP has been sent to your email!");
+    // return otpResponse(delivery, "OTP has been sent to your email!");
+    return { status: "Success", message: "Registered successfully. Please login." };
   } catch (e) {
     return { status: "fail", data: e.toString() };
   }
@@ -279,15 +283,13 @@ export const VerifyOTPService = async (req) => {
       return { status: "fail", message: "User not found" };
     }
 
-    // Check OTP match
-    if (user.otp !== otp) {
-      return { status: "fail", message: "Invalid OTP" };
-    }
-
-    // Check OTP expiry
-    if (user.otpExpires && new Date() > user.otpExpires) {
-      return { status: "fail", message: "OTP has expired. Please resend." };
-    }
+    // OTP verification disabled — skip OTP match/expiry checks.
+    // if (user.otp !== otp) {
+    //   return { status: "fail", message: "Invalid OTP" };
+    // }
+    // if (user.otpExpires && new Date() > user.otpExpires) {
+    //   return { status: "fail", message: "OTP has expired. Please resend." };
+    // }
 
     // Mark verified & clear OTP
     await UserModel.updateOne(
@@ -320,18 +322,18 @@ export const ResendOTPService = async (req) => {
       return { status: "fail", message: "User not found. Please register first." };
     }
 
-    const { code, expiry } = generateOTP();
+    // OTP verification disabled — resend is a no-op.
+    // const { code, expiry } = generateOTP();
+    // const emailText = `Your new OTP verification code is: ${code}. It expires in 90 seconds.`;
+    // const emailSubject = "UV Charging – Resend OTP";
+    // const delivery = await deliverOTP(email, code, emailSubject, emailText);
+    // await UserModel.updateOne(
+    //   { email: email.toLowerCase() },
+    //   { $set: { otp: code, otpExpires: expiry } }
+    // );
+    // return otpResponse(delivery, "New OTP has been sent to your email!");
 
-    const emailText = `Your new OTP verification code is: ${code}. It expires in 90 seconds.`;
-    const emailSubject = "UV Charging – Resend OTP";
-    const delivery = await deliverOTP(email, code, emailSubject, emailText);
-
-    await UserModel.updateOne(
-      { email: email.toLowerCase() },
-      { $set: { otp: code, otpExpires: expiry } }
-    );
-
-    return otpResponse(delivery, "New OTP has been sent to your email!");
+    return { status: "Success", message: "OTP verification is currently disabled." };
   } catch (e) {
     return { status: "fail", data: e.toString() };
   }
@@ -357,18 +359,19 @@ export const ForgotPasswordService = async (req) => {
       return { status: "fail", message: "Account not verified. Please register again." };
     }
 
-    const { code, expiry } = generateOTP();
-
-    const emailText = `Your password reset OTP is: ${code}. It expires in 90 seconds.`;
-    const emailSubject = "UV Charging – Reset Password";
-    await EmailSend(email, emailText, emailSubject);
+    // OTP verification disabled — skip OTP generation and email sending.
+    // const { code, expiry } = generateOTP();
+    // const emailText = `Your password reset OTP is: ${code}. It expires in 90 seconds.`;
+    // const emailSubject = "UV Charging – Reset Password";
+    // await EmailSend(email, emailText, emailSubject);
 
     await UserModel.updateOne(
       { email: email.toLowerCase() },
-      { $set: { otp: code, otpExpires: expiry, resetVerified: false } }
+      // { $set: { otp: code, otpExpires: expiry, resetVerified: false } }
+      { $set: { resetVerified: true } }
     );
 
-    return { status: "Success", message: "OTP has been sent to your email!" };
+    return { status: "Success", message: "You can now reset your password." };
   } catch (e) {
     return { status: "fail", data: e.toString() };
   }
@@ -390,13 +393,13 @@ export const VerifyForgotOTPService = async (req) => {
       return { status: "fail", message: "User not found" };
     }
 
-    if (user.otp !== otp) {
-      return { status: "fail", message: "Invalid OTP" };
-    }
-
-    if (user.otpExpires && new Date() > user.otpExpires) {
-      return { status: "fail", message: "OTP has expired. Please resend." };
-    }
+    // OTP verification disabled — skip OTP match/expiry checks.
+    // if (user.otp !== otp) {
+    //   return { status: "fail", message: "Invalid OTP" };
+    // }
+    // if (user.otpExpires && new Date() > user.otpExpires) {
+    //   return { status: "fail", message: "OTP has expired. Please resend." };
+    // }
 
     // Mark reset as verified so user can now set a new password
     await UserModel.updateOne(
