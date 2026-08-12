@@ -16,6 +16,7 @@ import ChargingSessionModel from "../models/ChargingSessionModel.js";
 import { recordEmissionsForSession } from "./carbonService.js";
 import AppSettingsModel from "../models/AppSettingsModel.js";
 import { EmailSend } from "../utils/emailHalper.js";
+import { isEmailConfigured, DEV_EXPOSE_OTP } from "../config/config.js";
 import { EncodeToken } from "../utils/tokenHelper.js";
 import { askGemini } from "../utils/geminiHelper.js";
 import { rankStationsByScore } from "../utils/stationScore.js";
@@ -133,6 +134,46 @@ const generateOTP = () => {
 const hashPassword = (password) =>
   crypto.createHash("sha256").update(password).digest("hex");
 
+// ─── Helper: Get the OTP to the user ───
+//
+// Signup awaits delivery *before* writing the user, so an unconfigured mail
+// provider does not merely skip the email — it fails registration outright with
+// `connect ECONNREFUSED 127.0.0.1:587`. DEV_EXPOSE_OTP is the escape hatch for
+// environments without a provider: the code comes back in the response instead.
+//
+// The flag is deliberately only consulted when email is unconfigured, so
+// setting SMTP restores normal behaviour even if the flag is left switched on.
+const deliverOTP = async (email, code, emailSubject, emailText) => {
+  if (isEmailConfigured()) {
+    await EmailSend(email, emailText, emailSubject);
+    return { delivered: true };
+  }
+
+  if (DEV_EXPOSE_OTP) {
+    console.warn(
+      `[DEV_EXPOSE_OTP] No mail provider configured — OTP for ${email} is ${code} (expires in 90s)`
+    );
+    return { delivered: false, devOtp: code };
+  }
+
+  throw new Error(
+    "Email delivery is not configured on this server, so the verification " +
+      "code cannot be sent. Set SMTP_HOST, SMTP_USER, SMTP_PASS and " +
+      "EMAIL_FROM, or set DEV_EXPOSE_OTP=true to return the code in the " +
+      "response instead."
+  );
+};
+
+// Keeps the `devOtp` field out of the payload entirely when email worked, so
+// nothing leaks the moment SMTP is configured.
+const otpResponse = (delivery, sentMessage) => ({
+  status: "Success",
+  message: delivery.delivered
+    ? sentMessage
+    : "Email is not configured on this server — use the code in `devOtp`.",
+  ...(delivery.delivered ? {} : { devOtp: delivery.devOtp }),
+});
+
 // ════════════════════════════════════════════════════════════
 // 1. REGISTER  –  POST /api/v1/Register
 // ════════════════════════════════════════════════════════════
@@ -155,7 +196,7 @@ export const RegisterService = async (req) => {
     // Send OTP email
     const emailText = `Your OTP verification code is: ${code}. It expires in 90 seconds.`;
     const emailSubject = "UV Charging – Email Verification";
-    await EmailSend(email, emailText, emailSubject);
+    const delivery = await deliverOTP(email, code, emailSubject, emailText);
 
     // Upsert user (handles re-registration of unverified users)
     await UserModel.updateOne(
@@ -174,7 +215,7 @@ export const RegisterService = async (req) => {
       { upsert: true }
     );
 
-    return { status: "Success", message: "OTP has been sent to your email!" };
+    return otpResponse(delivery, "OTP has been sent to your email!");
   } catch (e) {
     return { status: "fail", data: e.toString() };
   }
@@ -283,14 +324,14 @@ export const ResendOTPService = async (req) => {
 
     const emailText = `Your new OTP verification code is: ${code}. It expires in 90 seconds.`;
     const emailSubject = "UV Charging – Resend OTP";
-    await EmailSend(email, emailText, emailSubject);
+    const delivery = await deliverOTP(email, code, emailSubject, emailText);
 
     await UserModel.updateOne(
       { email: email.toLowerCase() },
       { $set: { otp: code, otpExpires: expiry } }
     );
 
-    return { status: "Success", message: "New OTP has been sent to your email!" };
+    return otpResponse(delivery, "New OTP has been sent to your email!");
   } catch (e) {
     return { status: "fail", data: e.toString() };
   }
