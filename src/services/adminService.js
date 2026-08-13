@@ -15,7 +15,7 @@ import {
   STRIPE_SECRET_KEY,
   STRIPE_PUBLISHABLE_KEY,
 } from "../config/config.js";
-import { generateStationQR, geocodeAddress, generateSlotsArray, generateNext7Dates } from "../utils/stationHelpers.js";
+import { generateStationQR, geocodeAddress, generateSlotsArray, generateNext7Dates, formatPricePerHour } from "../utils/stationHelpers.js";
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_SECRET_EXPIRES_IN });
@@ -321,6 +321,10 @@ export const AdminCreateStationService = async (body) => {
     delete body.endHour;
     delete body.intervalMin;
 
+    // Derive the display string rather than trusting whatever the client typed,
+    // so it always matches the configured currency.
+    body.pricePerHour = await formatPricePerHour(body.pricePerHourValue);
+
     const station = await NearestStationModel.create(body);
 
     // Auto-generate QR code for the new station
@@ -356,6 +360,13 @@ export const AdminUpdateStationService = async (id, body) => {
       delete body.startHour;
       delete body.endHour;
       delete body.intervalMin;
+    }
+
+    // Keep the display string in step with the numeric price whenever it moves.
+    if (body.pricePerHourValue !== undefined) {
+      body.pricePerHour = await formatPricePerHour(body.pricePerHourValue);
+    } else {
+      delete body.pricePerHour;
     }
 
     const station = await NearestStationModel.findByIdAndUpdate(id, body, { new: true });

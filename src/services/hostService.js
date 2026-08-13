@@ -1,5 +1,5 @@
 import NearestStationModel from "../models/NearestStationModel.js";
-import { geocodeAddress, generateSlotsArray, generateNext7Dates, generateStationQR } from "../utils/stationHelpers.js";
+import { geocodeAddress, generateSlotsArray, generateNext7Dates, generateStationQR, formatPricePerHour } from "../utils/stationHelpers.js";
 
 // ─── Driver submits their own charger as a listing (goes to review) ───
 export const HostCreateStationService = async (user_id, body) => {
@@ -19,7 +19,7 @@ export const HostCreateStationService = async (user_id, body) => {
       latitude: geo.lat,
       longitude: geo.lng,
       pricePerHourValue: Number(pricePerHourValue),
-      pricePerHour: `${pricePerHourValue}$/hr`,
+      pricePerHour: await formatPricePerHour(pricePerHourValue),
       slots: generateSlotsArray(8, 18, 30),
       availableDates: generateNext7Dates(),
       ownerId: user_id,

@@ -1,7 +1,25 @@
 import crypto from "crypto";
 import QRCode from "qrcode";
+import AppSettingsModel from "../models/AppSettingsModel.js";
 
 const GOOGLE_API_KEY = "AIzaSyDAUhNkL--7MVKHtlFuR3acwa7ED-cIoAU";
+
+// ── "৳12/hr" display string, built from the numeric price ──
+// pricePerHour is denormalized onto the station for the Flutter client and the
+// older list cards. It used to be written as `${value}$/hr` regardless of the
+// configured currency, so a BDT deployment still showed "12$/hr". Always derive
+// it from pricePerHourValue and the currency in App Settings.
+export const formatPricePerHour = async (value) => {
+  const numeric = Number(value) || 0;
+  let symbol = "৳";
+  try {
+    const settings = await AppSettingsModel.getSettings();
+    if (settings?.currencySymbol) symbol = settings.currencySymbol;
+  } catch {
+    /* settings unreadable — fall back to the schema default symbol */
+  }
+  return `${symbol}${numeric}/hr`;
+};
 
 // ── Generate a unique QR token + QR dataURL for a station ──
 export const generateStationQR = async (stationId) => {

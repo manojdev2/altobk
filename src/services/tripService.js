@@ -58,6 +58,7 @@ const findBestStopNear = async (point, excludeIds) => {
         rating: best.rating,
         status: best.status,
         pricePerHour: best.pricePerHour,
+        pricePerHourValue: best.pricePerHourValue,
       },
       excludeId: best._id,
     };
@@ -77,6 +78,7 @@ const findBestStopNear = async (point, excludeIds) => {
       rating: google.rating,
       status: null,
       pricePerHour: null,
+      pricePerHourValue: null,
     },
     excludeId: null,
   };

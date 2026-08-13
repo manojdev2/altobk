@@ -625,7 +625,7 @@ export const ToggleFavouriteStationService = async (user_id, body) => {
       stationName,
       address:      address      ?? "",
       image:        image        ?? "",
-      pricePerHour: pricePerHour ?? "0$/hr",
+      pricePerHour: pricePerHour ?? "",
       status:       status       ?? "Available",
       latitude:     latitude     ?? 0,
       longitude:    longitude    ?? 0,

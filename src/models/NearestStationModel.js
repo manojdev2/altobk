@@ -56,7 +56,10 @@ const NearestStationSchema = new mongoose.Schema(
       enum: ["approved", "pending", "rejected"],
       default: "approved",   // admin-created stations are live immediately
     },
-    pricePerHour:{ type: String, default: "0$/hr" },  // display string e.g. "10$/hr"
+    // Display string derived from pricePerHourValue + the configured currency
+    // (see formatPricePerHour). Defaults empty rather than to a "$" literal so a
+    // non-USD deployment never inherits the wrong symbol.
+    pricePerHour:{ type: String, default: "" },       // e.g. "৳10/hr"
     pricePerHourValue: { type: Number, default: 0 }, // numeric for calculation e.g. 10
     taxPercent:  { type: Number, default: 0 },       // tax % e.g. 5 means 5%
     latitude:    { type: Number, default: 0 },

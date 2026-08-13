@@ -11,7 +11,7 @@ const FavouriteStationSchema = new mongoose.Schema(
     stationName: { type: String, required: true },
     address: { type: String, default: "" },
     image: { type: String, default: "" },
-    pricePerHour: { type: String, default: "0$/hr" },
+    pricePerHour: { type: String, default: "" },  // carries the station's currency-aware string
     status: {
       type: String,
       enum: ["Available", "Unavailable", "Busy"],
