@@ -1,0 +1,13 @@
+node_modules/
+
+# Secrets — MONGODB_URI, JWT_SECRET, gateway keys, GOOGLE_MAPS_API_KEY
+.env
+.env.*
+!.env.example
+
+# Runtime artifacts
+uploads/
+*.log
+npm-debug.log*
+
+.DS_Store
