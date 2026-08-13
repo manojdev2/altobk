@@ -2,7 +2,10 @@ import crypto from "crypto";
 import QRCode from "qrcode";
 import AppSettingsModel from "../models/AppSettingsModel.js";
 
-const GOOGLE_API_KEY = "AIzaSyDAUhNkL--7MVKHtlFuR3acwa7ED-cIoAU";
+// Read from the environment — this key used to be committed in this file, so it
+// must be set (and the old one rotated) wherever the API runs. Geocoding fails
+// closed without it: callers already handle a null result as "address not found".
+const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 
 // ── "৳12/hr" display string, built from the numeric price ──
 // pricePerHour is denormalized onto the station for the Flutter client and the
@@ -31,6 +34,13 @@ export const generateStationQR = async (stationId) => {
 
 // ─── Geocode address → { lat, lng } using Google Maps ───
 export const geocodeAddress = async (address) => {
+  if (!GOOGLE_API_KEY) {
+    console.warn(
+      "[stationHelpers] GOOGLE_MAPS_API_KEY is not set — geocoding is disabled, " +
+        "so station creation will report the address as not found."
+    );
+    return null;
+  }
   try {
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_API_KEY}`;
     const res = await fetch(url);
