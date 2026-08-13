@@ -479,8 +479,13 @@ export const AdminGetBookingsService = async () => {
 
 export const AdminGetReviewsService = async () => {
   try {
+    // ReviewModel.stationId is a String with no `ref`, so the usual
+    // .populate("stationId", "name") silently returns the raw id string and the
+    // admin table renders "—" for every row. Naming the model explicitly makes
+    // mongoose cast the string to an ObjectId and resolve the station.
     const reviews = await ReviewModel.find()
       .populate("userId", "fullName email")
+      .populate({ path: "stationId", model: NearestStationModel, select: "name" })
       .sort({ createdAt: -1 });
     return { status: "Success", data: reviews };
   } catch (e) {
