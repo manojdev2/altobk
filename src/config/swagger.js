@@ -4,9 +4,9 @@ import swaggerUi from "swagger-ui-express";
 const swaggerDefinition = {
   openapi: "3.0.0",
   info: {
-    title: "UV Charging API",
+    title: "Anentaa.ev API",
     version: "1.0.0",
-    description: "API documentation for UV Charging backend",
+    description: "API documentation for the Anentaa.ev backend",
   },
   servers: [
     { url: "http://localhost:3001", description: "Development" },
@@ -3728,6 +3728,6 @@ const swaggerSpec = swaggerJsdoc({
 export const setupSwagger = (app) => {
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: "UV Charging API Docs",
+    customSiteTitle: "Anentaa.ev API Docs",
   }));
 };

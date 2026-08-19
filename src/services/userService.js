@@ -198,7 +198,7 @@ export const RegisterService = async (req) => {
 
     // Send OTP email
     // const emailText = `Your OTP verification code is: ${code}. It expires in 90 seconds.`;
-    // const emailSubject = "UV Charging – Email Verification";
+    // const emailSubject = "Anentaa.ev – Email Verification";
     // const delivery = await deliverOTP(email, code, emailSubject, emailText);
 
     // Upsert user (handles re-registration of unverified users)
@@ -325,7 +325,7 @@ export const ResendOTPService = async (req) => {
     // OTP verification disabled — resend is a no-op.
     // const { code, expiry } = generateOTP();
     // const emailText = `Your new OTP verification code is: ${code}. It expires in 90 seconds.`;
-    // const emailSubject = "UV Charging – Resend OTP";
+    // const emailSubject = "Anentaa.ev – Resend OTP";
     // const delivery = await deliverOTP(email, code, emailSubject, emailText);
     // await UserModel.updateOne(
     //   { email: email.toLowerCase() },
@@ -362,7 +362,7 @@ export const ForgotPasswordService = async (req) => {
     // OTP verification disabled — skip OTP generation and email sending.
     // const { code, expiry } = generateOTP();
     // const emailText = `Your password reset OTP is: ${code}. It expires in 90 seconds.`;
-    // const emailSubject = "UV Charging – Reset Password";
+    // const emailSubject = "Anentaa.ev – Reset Password";
     // await EmailSend(email, emailText, emailSubject);
 
     await UserModel.updateOne(
